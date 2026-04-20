@@ -28,15 +28,38 @@ if ! [[ "$1" == "-noupdate" ]]; then
 	echo
 fi
 
+# Use case sensitive matching
 shopt -u nocasematch
+
+# Function to compare Debian versions
+bookworm_or_greater() {
+    # Check if version is greater than or equal to 12 (Bookworm)
+    if [ "$1" -ge 12 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Get Debian version
+DEBIAN_VERSION=$(cat /etc/debian_version | cut -d '.' -f 1)
+DEBIAN_NAME=$(grep -oP '(?<=VERSION_CODENAME=)[a-z]+' /etc/os-release)
+
 
 # install dependencies
 echo -e "${CYAN}${UNDERLINE}Installing Dependencies...${NONE}"
 echo
+
 sudo apt-get -y install python3 python3-pip python3-dev gcc
-sudo apt-get -y install sqlite3 joystick
-sudo apt-get install python3-rpi.gpio
-sudo pip3 install evdev
+sudo apt-get -y install sqlite3 joystick python3-evdev
+
+echo "Debian version is: ${FUSCHIA}${UNDERLINE}$DEBIAN_VERSION - $DEBIAN_NAME${NONE}. Installing appropriate dependencies..."
+if bookworm_or_greater "$DEBIAN_VERSION"; then
+    sudo apt-get -y remove python3-rpi.gpio
+    sudo apt-get -y install python3-rpi-lgpio
+else
+    sudo apt-get -y install python3-rpi.gpio
+fi
 
 # add gpionext.service to systemd
 file1=$SCRIPTPATH"/gpionext.service"
